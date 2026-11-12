@@ -1,6 +1,6 @@
 // Evidence writer: explains a decision in plain English. It can never change the decision.
 import { generateText } from "ai";
-import { hasAI, model , limits } from "./ai";
+import { hasAI, limits, withModels } from "./ai";
 import type { Job } from "./types";
 import { splitAmount } from "./engine/decide";
 
@@ -8,15 +8,15 @@ export async function writeReport(job: Job): Promise<string> {
   const facts = templateReport(job);
   if (!hasAI() || !job.decision) return facts;
   try {
-    const { text } = await generateText({ ...limits(),
-      model: model(),
+    const { result: { text } } = await withModels((m) => generateText({ ...limits(),
+      model: m,
       temperature: 0,
       system:
         "Write a short, neutral settlement report for a buyer and a seller: 4 to 6 sentences, plain English, no headings. " +
         "Say what was promised, what was checked and by which source, what passed or failed, and the payout. " +
         "Use only the facts given. Never change a number or add opinions.",
       prompt: facts,
-    });
+    }));
     return text.trim() || facts;
   } catch {
     return facts;

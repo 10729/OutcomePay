@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { generateObject } from "ai";
-import { hasAI, model, MODEL_NAME , limits } from "@/lib/ai";
+import { hasAI, limits, withModels } from "@/lib/ai";
 import { compileContract } from "@/lib/contract/compile";
 import { buildContract, hashContract } from "@/lib/jobs";
 import { listJobs, putProposal } from "@/lib/store";
@@ -47,11 +47,12 @@ export async function POST(req: Request) {
     });
     if (!candidates.length) throw new Error("No seller offers this within your budget.");
 
-    let choice: z.infer<typeof Choice>;
-    let engine: string;
+    let choice: z.infer<typeof Choice> | null = null;
+    let engine = "rule-based ranking (no AI key set)";
     if (hasAI()) {
-      const { object } = await generateObject({ ...limits(),
-        model: model(),
+      try {
+      const { result: { object }, name: usedModel } = await withModels((m) => generateObject({ ...limits(),
+        model: m,
         schema: Choice,
         temperature: 0,
         system:
@@ -60,10 +61,14 @@ export async function POST(req: Request) {
           "price must be within budget and at least the seller's priceFrom. promise is the outcome the seller should commit to, with a measurable number. " +
           "reasoning: 2 to 3 sentences citing the numbers.",
         prompt: `Buyer goal: ${b.goal}\nBudget: $${b.budget}\nCandidates:\n${JSON.stringify(candidates, null, 2)}`,
-      });
+      }));
       choice = object;
-      engine = `Gemini (${MODEL_NAME})`;
-    } else {
+      engine = `Gemini (${usedModel})`;
+      } catch (err) {
+        engine = `rule-based ranking (Gemini unavailable: ${((err as Error)?.message ?? "error").slice(0, 120)})`;
+      }
+    }
+    if (!choice) {
       const best = [...candidates].sort((x, y) => y.avgPayoutPct - x.avgPayoutPct || x.guardFails - y.guardFails)[0];
       choice = {
         sellerId: best.id,
@@ -71,7 +76,6 @@ export async function POST(req: Request) {
         promise: b.goal,
         reasoning: `${best.name} has earned an average of ${best.avgPayoutPct}% of held payments across ${best.jobs} verified jobs, with ${best.guardFails} guard failures. Highest verified delivery within your budget.`,
       };
-      engine = "rule-based ranking (no AI key set)";
     }
 
     const seller = candidates.find((c) => c.id === choice.sellerId);

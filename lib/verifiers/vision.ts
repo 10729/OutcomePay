@@ -4,7 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { generateObject } from "ai";
 import { z } from "zod";
-import { hasAI, model, MODEL_NAME , limits } from "../ai";
+import { hasAI, limits, withModels } from "../ai";
 import type { ChecklistOutcomeT } from "../contract/schema";
 import type { Evidence, Photo } from "../types";
 import { newId, sha256 } from "../hash";
@@ -59,8 +59,8 @@ export async function judgeSide(
       after.map(async (p) => ({ type: "image" as const, image: await fs.readFile(path.join(UPLOAD_DIR, jobId, p.file)) })),
     );
     const list = outcome.items.map((it) => `- ${it.id}: ${it.label}`).join("\n");
-    const { object } = await generateObject({ ...limits(40_000),
-      model: model(),
+    const { result: { object }, name: usedModel } = await withModels((m) => generateObject({ ...limits(30_000),
+      model: m,
       schema: VisionResult,
       system: SYSTEM,
       temperature: 0,
@@ -70,7 +70,7 @@ export async function judgeSide(
           content: [{ type: "text", text: `Checklist:\n${list}\n\nThe photos below were taken after the job.` }, ...images],
         },
       ],
-    });
+    }));
     const photoHashes = after.map((p) => p.hash).join(",");
     return outcome.items.map((it) => {
       const r = object.items.find((x) => x.id === it.id);
@@ -79,7 +79,7 @@ export async function judgeSide(
         id: newId("ev"),
         checks: `${outcome.id}:${it.id}:${side}`,
         verifier: "vision.checklist",
-        source: `${who}, AI vision (${MODEL_NAME})`,
+        source: `${who}, AI vision (${usedModel})`,
         provenance,
         capturedAt: new Date().toISOString(),
         value,

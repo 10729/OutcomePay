@@ -2,7 +2,7 @@
 // The AI extracts intent; code builds the contract, so its structure is always valid.
 // Without an AI key, a deterministic template is used so the app always works.
 import { generateObject } from "ai";
-import { hasAI, model, MODEL_NAME , limits } from "../ai";
+import { hasAI, limits, withModels } from "../ai";
 import { type ContractDraftT, ServiceDraftAI, validateDraft, WebDraftAI } from "./schema";
 
 export type CompileInput = {
@@ -29,25 +29,28 @@ Return:
 
 export async function compileContract(input: CompileInput): Promise<CompileResult> {
   if (input.kind === "web" && !input.url) throw new Error("A website URL is required for a speed job.");
+  let why = "no AI key set";
   if (hasAI()) {
     try {
       return input.kind === "web" ? await compileWebAI(input) : await compileServiceAI(input);
     } catch (err) {
-      console.error("AI compile failed, using template:", (err as Error).message);
+      const msg = (err as Error).message || String(err);
+      console.error("AI compile failed, using template:", msg);
+      why = `Gemini error: ${msg.slice(0, 160)}`;
     }
   }
   const draft = input.kind === "web" ? webTemplate(input, null) : serviceTemplate(input);
-  return { draft, engine: "template (no AI key set)", notes: [] };
+  return { draft, engine: `template (${why})`, notes: [] };
 }
 
 async function compileWebAI(input: CompileInput): Promise<CompileResult> {
-  const { object } = await generateObject({ ...limits(),
-    model: model(),
+  const { result: { object }, name: usedModel } = await withModels((m) => generateObject({ ...limits(),
+    model: m,
     schema: WebDraftAI,
     system: WEB_SYSTEM,
     prompt: `Promise: ${input.promise}`,
     temperature: 0,
-  });
+  }));
   const target = clamp(object.target_seconds, 0.5, 10);
   const steps = object.soft_steps
     .filter((s) => s.seconds > target)
@@ -58,20 +61,20 @@ async function compileWebAI(input: CompileInput): Promise<CompileResult> {
   const err = validateDraft(draft);
   if (err) throw new Error(err);
   const notes = object.guards_suggested.map((g) => `Guard "${g.kind === "checkout_works" ? "checkout still works" : "content kept"}": ${g.why}`);
-  return { draft, engine: `Gemini (${MODEL_NAME})`, notes };
+  return { draft, engine: `Gemini (${usedModel})`, notes };
 }
 
 async function compileServiceAI(input: CompileInput): Promise<CompileResult> {
-  const { object } = await generateObject({ ...limits(),
-    model: model(),
+  const { result: { object }, name: usedModel } = await withModels((m) => generateObject({ ...limits(),
+    model: m,
     schema: ServiceDraftAI,
     system: SERVICE_SYSTEM,
     prompt: `Promise: ${input.promise}`,
     temperature: 0,
-  });
+  }));
   const draft = serviceDraft(object.title || "Photo-verified service", object.promise || input.promise, object.items);
   const notes = object.unmeasurable.map((u) => `Left out (can't be verified from a photo): ${u}`);
-  return { draft, engine: `Gemini (${MODEL_NAME})`, notes };
+  return { draft, engine: `Gemini (${usedModel})`, notes };
 }
 
 function clamp(n: number, lo: number, hi: number) {
