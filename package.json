@@ -1,0 +1,39 @@
+{
+  "name": "outcomepay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OutcomePay: pay only if it works. Outcome-based payments on PayPal, verified by AI.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "money": "tsx scripts/money-flow.ts",
+    "partial": "tsx scripts/partial-capture.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "1.2.22",
+    "@paypal/react-paypal-js": "8.8.3",
+    "@simplewebauthn/browser": "13.3.0",
+    "@simplewebauthn/server": "13.3.3",
+    "ag-grid-community": "33.3.2",
+    "ag-grid-react": "33.3.2",
+    "ai": "4.3.19",
+    "dotenv": "16.4.7",
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.10",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "autoprefixer": "10.4.20",
+    "postcss": "8.4.49",
+    "tailwindcss": "3.4.17",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2"
+  }
+}
