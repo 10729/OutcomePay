@@ -73,7 +73,7 @@ Terminal tests of the money engine: `npm run money`, `npm run partial`.
 
 | Component | Model | Role |
 | --- | --- | --- |
-| Contract writer | Google Gemini (`GEMINI_MODEL`, default `gemini-flash-latest`) via Vercel AI SDK | Extracts targets, checklist items and gaming risks; code builds and validates the contract |
+| Contract writer | Google Gemini (`GEMINI_MODEL`, default `gemini-2.5-flash`) via Vercel AI SDK | Extracts targets, checklist items and gaming risks; code builds and validates the contract |
 | Vision verifier | Same | Judges each checklist item from one side's photos, with confidence and an observation |
 | Purchasing agent | Same | Chooses a seller from verified track records and writes the promise |
 | Report writer | Same | Explains the decision; cannot change it |

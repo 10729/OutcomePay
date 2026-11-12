@@ -1,6 +1,6 @@
 import { google } from "@ai-sdk/google";
 
-export const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-flash-latest";
+export const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 export function hasAI(): boolean {
   return Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
